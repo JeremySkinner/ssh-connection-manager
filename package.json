@@ -2,7 +2,6 @@
   "name": "ssh-connection-manager",
   "version": "0.1.0",
   "description": "SSH Connection Manager",
-  "preferGlobal": true,
   "bin": {
     "sshcon": "./src/app.js"
   },
@@ -15,6 +14,7 @@
   "dependencies": {
     "cliff": "^0.1.10",
     "commander": "^2.17.1",
+    "inquirer": "^6.1.0",
     "ssh-config": "^1.1.3"
   }
 }
