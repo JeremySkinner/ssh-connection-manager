@@ -6,15 +6,27 @@ const inquirer = require('inquirer');
 
 const rowColours = ['yellow', 'yellow', 'yellow', 'yellow'];
 
-module.exports = async function() {
-  if(fs.exists("/tmp/new_ssh_connection")) {
-    fs.unlink("/tmp/new_ssh_connection");
-  }
-
+function parseConfig() {
   var p = path.join(process.env.HOME, "/.ssh/config");
   var contents = fs.readFileSync(p, 'utf8');
-  var config = SSHConfig.parse(contents);
+  return SSHConfig.parse(contents);
+}
 
+function removeTempFile() {
+  if(fs.existsSync("/tmp/new_ssh_connection")) {
+    fs.unlinkSync("/tmp/new_ssh_connection");
+  }
+}
+
+function createTempFile(hostname) {
+  fs.writeFileSync("/tmp/new_ssh_connection", hostname);
+}
+
+module.exports = async function() {
+  removeTempFile();
+
+  var config = parseConfig();
+  
   var computed = config
     // Get all entries except wildcards
     .filter(x => x.type == 1 && x.param == 'Host' && x.value != '*' && x.value.indexOf('?') === -1)
@@ -26,50 +38,44 @@ module.exports = async function() {
         host.User = '';
       }
 
-      // Add an index for display purposes
-      host['#'] = index+1;
-
       return host;
     });
 
-  // Only show specified properties.
-  console.log(cliff.stringifyObjectRows(computed, ['#', 'Host', 'HostName', 'User'], rowColours));
-  console.log("\n");
+  // Use cliff to nicely format the 3 columns with padding.
+  // Split the options into an array that we can then pass to inquirer.
+  var formatted = cliff.stringifyObjectRows(computed, ['Host', 'HostName', 'User'], rowColours)
+    .split("\n");
+  
+  // Create the pairings of string output with the underlying option.
+  var choices = formatted.map((output, i) => {
+    let host = computed[i-1];
+    return { value: host, name: output, short: host ? host.Host : "" }
+  });
 
-  var response = await inquirer.prompt([{ type: 'input', name: 'selection', message: 'Enter a connection (or leave blank to cancel):' }]);
+  var response = await inquirer.prompt([
+    { type: 'list', name: 'selection', message: 'Select a connection:', choices: choices, pageSize: 100 
+  }]);
 
-  if (!response.selection) return; //nothing selected.
+  var foundHost = response.selection;
+  
+  if (!foundHost) return;
 
-  var foundHost = null;
+  var user = foundHost.User;
+  var hostname = foundHost.Host;
 
-  if(isNaN(response.selection)) {
-    // User entered a string. Find the host with this name
-    // Can't just use find with a function as the config defines its own find method.
-    foundHost = computed.filter(x => x.Host == response.selection);
-    foundHost = host.length ? host[0] : null;
-  }
-  else {
-    foundHost = computed[response.selection-1];
-  }
+  if (!user) {
+    response = await inquirer.prompt([{ type: 'input', name: 'user', message: 'Enter a username:' }]);
 
-  if(foundHost) {
-    var user = foundHost.User;
-    var hostname = foundHost.Host;
-
-    if (!user) {
-      response = await inquirer.prompt([{ type: 'input', name: 'user', message: 'Enter a username:' }]);
-
-      if(response.user) {
-        user = response.user;
-      }
+    if(response.user) {
+      user = response.user;
     }
-
-    if (user) {
-      hostname = `${response.user}@${hostname}`;
-    }
-
-    // Can't figure out how to launch the ssh command directly in a sensible way.
-    // Instead just write to a temp file and then let the bash script handle it.
-    fs.writeFileSync("/tmp/new_ssh_connection", hostname);
   }
+
+  if (user) {
+    hostname = `${response.user}@${hostname}`;
+  }
+
+  // Can't figure out how to launch the ssh command directly in a sensible way.
+  // Instead just write to a temp file and then let the bash script handle it.
+  createTempFile(hostname);
 }
