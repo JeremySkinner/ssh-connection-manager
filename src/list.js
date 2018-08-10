@@ -3,6 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const cliff = require('cliff');
 const inquirer = require('inquirer');
+const figures = require('figures');
+const iswsl = require('is-wsl');
+
+// figures' platform detection uses os.platform, which returns linux under WSL
+// But if we're in WSL, then we need to use the Windows glyphs.
+if (iswsl) {
+  figures.pointer = '>';
+}
 
 const rowColours = ['yellow', 'yellow', 'yellow', 'yellow'];
 
@@ -76,6 +84,6 @@ module.exports = async function() {
   }
 
   // Can't figure out how to launch the ssh command directly in a sensible way.
-  // Instead just write to a temp file and then let the bash script handle it.
+  // Instead just write to a temp file, exit, and then let the bash script read it out and launch ssh.
   createTempFile(hostname);
 }
