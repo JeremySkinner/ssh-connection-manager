@@ -80,7 +80,7 @@ module.exports = async function() {
   }
 
   if (user) {
-    hostname = `${response.user}@${hostname}`;
+    hostname = `${user}@${hostname}`;
   }
 
   // Can't figure out how to launch the ssh command directly in a sensible way.
