@@ -4,7 +4,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 if [ "$1" == "" ]; then 
   node $DIR/src/app.js list
 else 
-   node $DIR/src/app.js $@ 
+   # node $DIR/src/app.js $@ 
+   command ssh $@
 fi 
 
 # If the app created a connection file, load it and connect.
