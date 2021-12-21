@@ -14,7 +14,7 @@
   "dependencies": {
     "cliff": "^0.1.10",
     "commander": "^2.20.0",
-    "inquirer": "^6.5.0",
+    "inquirer": "^8.2.0",
     "is-wsl": "^1.1.0",
     "ssh-config": "^1.1.6"
   }
